@@ -31,104 +31,109 @@ serverIsRunning:= false
 @(private)
 router := make_new_router()
 
-run_ostrich_server :: proc(server: ^lib.Server) -> ^lib.Error {
+serve :: proc(server: ^lib.Server) -> lib.Error {
     using lib
     using fmt
 
-    // Initialize dynamic path system
-    pathConfig := config.init_dynamic_paths()
-    defer config.cleanup_dynamic_paths()
-
-    // Load application config
-    appConfig := config.load_config_with_dotenv()
-
     serverIsRunning = true
-
-    server.port = appConfig.server.port
-    apiBase := fmt.tprintf("/api/%s", server.version)
 
     { //START OF TEMP CONTEXT ALLOCATION SCOPE
             context.allocator = context.temp_allocator
 
+            //Example of making several static CORS preflight endpoints
+            make_several_static_cors_endpoints :: proc(server: ^lib.Server){
+                staticEndpoints:= []string{"ping", "health"} //Change these if you want or modify the logic :)
+
+                for e in staticEndpoints{
+                    newRoute:= make_new_route(.OPTIONS, tprintf("/%s/%s", server.apiBase, e), handle_options_request)
+                    add_route_to_router(router, newRoute)
+                }
+            }
+
+            //Example of making a dynamic CORS preflight endpoint.
+            dynamicOptionsRoute:= make_new_route(.OPTIONS,tprintf("/%s/*", server.apiBase), handle_options_request)
+            add_route_to_router(router, dynamicOptionsRoute)
+
+
             //OPTIONS '/*' dynamic route. CORS preflight related shit. Need these otherwise shit breaks
+            // add_route_to_router(router, tprintf("/%s/*", server.apiBase), handle_options_request)
+            // add_route_to_router(router, .OPTIONS, "/api/v1/ping", handle_options_request)
+            // add_route_to_router(router, .OPTIONS, "/api/v1/health", handle_options_request)
 
-            //Example CORS preflight for static endpoints
-            add_route_to_router(router, .OPTIONS, "/api/v1/ping", handle_options_request)
-            add_route_to_router(router, .OPTIONS, "/api/v1/health", handle_options_request)
 
+            //Example of making several static GET request endpoints
+            make_several_get_endpoints :: proc(server: ^lib.Server){
+                staticEndpoints:= []string{"ping", "health"} //Change these if you want or modify the logic :)
 
-            //Example CORS preflight for dynamic endpoint
-            add_route_to_router(router, .OPTIONS, "/api/v1/*", handle_options_request)
+                for e in staticEndpoints{
+                    newRoute:= make_new_route(.GET, tprintf("/%s/%s", server.apiBase, e), handle_options_request)
+                    add_route_to_router(router, newRoute)
+                }
+            }
 
-            //Example requests on simple static endpoints
-            add_route_to_router(router, .POST, "/ping", handle_get_request)
-            add_route_to_router(router, .GET, "/health", handle_health_check)
-
-            //Example requests on dynamic endpoint
-            add_route_to_router(router, .GET, "/apy/v1/*", handle_get_request)
+            //Example of making a single static GET request endpoint
+            dynamicRoute:= make_new_route(.GET,tprintf("/%s/*", server.apiBase), handle_options_request)
+            add_route_to_router(router, dynamicRoute)
 
     } //END OF TEMP CONTEXT ALLOCATION SCOPE
 
 
-    //Parse bind address from config
-    bindIP := parse_ip_address(appConfig.server.bindAddress)
-    endpoint := net.Endpoint{bindIP, server.port}
+    bindIP := parse_ip_address("127.0.0.1") //Pass is whatever address you are binding to
+    endpoint := net.Endpoint{bindIP, server.config.port}
 
-    // Use backlog size from config
-    listenSocket, listen_err := net.listen_tcp(endpoint, appConfig.server.backlogSize)
-    if listen_err != nil {
-        printf("Error listening on socket: %v\n", listen_err)
-        return make_new_err(.SERVER_CANNOT_LISTEN_ON_SOCKET, get_caller_location())
+    listenSocket, listenError := net.listen_tcp(endpoint)
+    if listenError != nil {
+        printf("Error listening on socket: %v\n", listenError)
+        return make_error( "Server Failed To Listen On TCP Socket", .ERROR, get_caller_location())
     }
 
     defer net.close(net.TCP_Socket(listenSocket))
 
     printf(
         "Odin HTTP server listening on %s:%d (bind: %s)\n",
-        appConfig.server.host,
-        server.port,
-        appConfig.server.bindAddress,
+        server.config.host,
+        server.config.port,
+        server.config.bindAddress,
     )
-    printf("API Base URL: http://%s:%d%s\n", appConfig.server.host, server.port, apiBase)
+
+    printf("API Base URL: http://%s:%d%s\n", server.config.host, server.config.port, server.apiBase)
 
     // Main server loop
     for serverIsRunning {
-        if appConfig.logging.level == "DEBUG" {
-            fmt.println("Waiting for new connection...")
-        }
-
+        fmt.println("Waiting for new connection...")
         clientSocket, remoteEndpoint, acceptError := net.accept_tcp(listenSocket)
         if acceptError != nil {
             fmt.println("Error accepting connection: ", acceptError)
-            return make_new_err(.SERVER_CANNOT_ACCEPT_CONNECTION, get_caller_location())
+            return make_error("Server Failed To Accept Client TCP Socket Connection", .ERROR, get_caller_location())
         }
 
-        handle_connection(clientSocket, appConfig, router)
+        handle_connection(clientSocket, server, router)
     }
 
     fmt.println("Server stopped successfully")
-    return no_error()
+    return make_error()
 }
 
 @(cold)
-handle_connection :: proc(socket: net.TCP_Socket, appConfig: ^lib.AppConfig, router: ^lib.Router) -> ^lib.Error{
+handle_connection :: proc(socket: net.TCP_Socket, server: ^lib.Server, router: ^lib.Router) -> lib.Error{
     using lib
     using fmt
 
     defer net.close(socket)
 
-    maxBufferSize := appConfig.security.maxRequestBodySizeMb * 1024 * 1024
+    maxBufferSize := server.config.security.maxRequestBodySizeMb * 1024 * 1024
     buf := make([]byte, min(maxBufferSize, 4096))
     defer delete(buf)
 
     for {
         println("Waiting to receive data...")
+        println("To safely kill the server enter: 'kill' or 'exit' then hit your 'enter' key")
 
         bytesRead, readTCPSocketError := net.recv(socket, buf[:])
 
         if bytesRead == 0 {
             println("Connection closed by client")
-            return no_error()
+            return make_error()
         }
 
         // Parse incoming request
@@ -140,20 +145,18 @@ handle_connection :: proc(socket: net.TCP_Socket, appConfig: ^lib.AppConfig, rou
         args := []string{request_body} if len(request_body) > 0 else []string{""}
 
         // Handle the request using router
-        httpStatus, responseBody := handle_http_request(router, method, path, headers, args)
+        httpStatus, responseBody := handle_http_request(server.config, router, method, path, headers, args)
 
-        if appConfig.logging.consoleOutput || appConfig.logging.level == "DEBUG" {
-        }
+
 
         // Build and send response
-        version, versionLoaded := get_ost_version(); if !versionLoaded do continue
         responseHeaders := make(map[string]string)
         responseHeaders["Content-Type"] = "application/json"
-        responseHeaders["Server"] = tprintf("OstrichDB:%s", string(version))
+        responseHeaders["Server"] = tprintf("Odin HTTP Server:%s", server.version)
         responseHeaders["X-API-Version"] = "v1"
 
         // Apply CORS headers to response
-        apply_cors_headers(&responseHeaders, headers, method)
+        apply_cors_headers(server.config, &responseHeaders, headers, method)
 
         response := build_http_response(httpStatus, responseHeaders, responseBody)
 
@@ -162,7 +165,7 @@ handle_connection :: proc(socket: net.TCP_Socket, appConfig: ^lib.AppConfig, rou
         defer delete(response) //TODO: If a memory leak ye seek come here and take a peek - Marshall
         if writeError != nil {
             printf("ERROR: Failed to write response to socket: %v\n", writeError)
-            return make_new_err(.SERVER_CANNOT_WRITE_RESPONSE_TO_SOCKET, get_caller_location())
+            return make_error("Server Failed To Write Response", .ERROR, get_caller_location())
         }
     }
 }
@@ -215,15 +218,14 @@ HANDLE_SERVER_KILL_SWITCH :: proc() {
 
 
 	for serverIsRunning {
-		input := get_input(false)
+		input := get_input()
 		if input == "kill" || input == "exit" {
-			// println("Stopping OstrichDB server...")
 			serverIsRunning = false
-			//ping the server to essentially refresh it to ensure it stops thus breaking the server main loop
-			for port in ServerPorts{
-				portCString := clone_to_cstring(tprintf("nc -zv localhost %d", port))
-				libc.system(portCString)
-			}
+
+			//Be sure to change the port number if you use a different server.config.port in main.odin
+			portCString := clone_to_cstring("nc -zv localhost 8080")
+			libc.system(portCString)
+
 			return
 		} else do continue
 	}

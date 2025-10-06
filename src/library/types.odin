@@ -77,7 +77,7 @@ HttpMethodString := [HttpMethod]string{
 }
 
 
-RouteHandler ::proc(method: HttpMethod,path:string, headers:map[string]string, args:[]string) -> (^HttpStatus, string)
+RouteHandler ::proc(config: ^Config, method: HttpMethod,path:string, headers:map[string]string, args:[]string) -> (^HttpStatus, string)
 
 Route :: struct {
     method: HttpMethod,

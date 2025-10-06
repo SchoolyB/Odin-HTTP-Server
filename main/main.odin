@@ -32,16 +32,8 @@ create_custom_config :: proc() -> ^lib.Config {
     //Make a new config to be passed to the server
     config := new(Config)
 
-
-    //Here you can choose several ports to allow your server to run on
-    //I made it this way because so many applications i.e Vite, node, etc
-    // tend to  run on similar ports. Just modify the numbers
-    serverPorts:= make([dynamic]int)
-
-
-
     //General config information. Modify discretion
-    config.port = 8080
+    config.port = 8080 //If you modify this, update the port in HANDLE_SERVER_KILL_SWITCH() in server.odin
     config.host = "localhost"
     config.bindAddress =  "127.0.0.1"
     config.apiVersion = "v1"

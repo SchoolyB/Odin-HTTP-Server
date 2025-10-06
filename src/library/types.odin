@@ -3,10 +3,29 @@ package library
 import "core:time"
 
 Server :: struct {
-    port: int,
     version: string,
-    timestamp: time.Time
+    apiBase: string,
+    startTimestamp: time.Time,
+    config : ^Config,
+
     //Add more shit here if you need. Timestamps, etc....
+}
+
+Config :: struct {
+    port, backlogSize, maxConnections, requestTimeoutSeconds: int,
+    host, bindAddress, apiVersion: string,
+
+    security : struct {
+        maxRequestBodySizeMb : int,
+    },
+
+    cors : struct {
+        allowedOrigins,  allowedHeaders, exposeHeaders:[]string,
+        allowedMethods: []HttpMethod,
+        maxAgeSeconds: int,
+        allowCredentials: bool
+    },
+
 }
 
 HttpStatusCode :: enum{
@@ -97,4 +116,14 @@ HttpStatusText :: #sparse[HttpStatusCode]string {
     .BAD_GATEWAY         = "Bad Gateway",
     .SERVICE_UNAVAILABLE = "Service Unavailable",
     .GATEWAY_TIMEOUT     = "Gateway Timeout",
+}
+
+
+CorsOptions :: struct {
+    allowOrigins: []string,           // List of allowed origins, use ["*"] for all
+    allowMethods: []HttpMethod,   // List of allowed HTTP methods
+    allowHeaders: []string,           // List of allowed headers
+    exposeHeaders: []string,          // List of headers exposed to the browser
+    allowCredentials: bool,           // Whether to allow credentials (cookies, etc.)
+    maxAge: int,                      // How long preflight requests can be cached (in seconds)
 }

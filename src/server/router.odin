@@ -49,7 +49,7 @@ add_route_to_router :: proc(router: ^lib.Router, route: ^lib.Route){
 
 //This finds the route that matches the path and calls appropriate handler
 @(require_results)
-handle_http_request :: proc(config: ^lib.Config, router: ^lib.Router,method: lib.HttpMethod, path:string, headers: map[string]string, args:[]string={""}) -> (status: ^lib.HttpStatus, response: string,) {
+handle_http_request :: proc(server: ^lib.Server, router: ^lib.Router,method: lib.HttpMethod, path:string, headers: map[string]string, args:[]string={""}) -> (status: ^lib.HttpStatus, response: string,) {
 	using lib
 
 
@@ -73,7 +73,7 @@ handle_http_request :: proc(config: ^lib.Config, router: ^lib.Router,method: lib
 
 		// If the path matches and the method matches, call the handler
 		if pathMatch && route.method == method {
-			return route.handler(config ,method, path, headers, args)
+			return route.handler(server ,method, path, headers, args)
 		}
 	}
 

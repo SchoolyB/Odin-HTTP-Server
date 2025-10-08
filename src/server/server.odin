@@ -31,6 +31,26 @@ serverIsRunning:= false
 @(private)
 router := make_new_router()
 
+//Example of making several static CORS preflight endpoints
+make_several_static_cors_endpoints :: proc(server: ^lib.Server){
+    staticEndpoints:= []string{"ping", "health"} //Change these if you want or modify the logic :)
+
+    for e in staticEndpoints{
+        newRoute:= make_new_route(.OPTIONS, fmt.tprintf("/%s/%s", server.apiBase, e), handle_options_request)
+        add_route_to_router(router, newRoute)
+    }
+}
+
+//Example of making several static GET request endpoints
+make_several_get_endpoints :: proc(server: ^lib.Server){
+    staticEndpoints:= []string{"ping", "health"} //Change these if you want or modify the logic :)
+
+    for e in staticEndpoints{
+        newRoute:= make_new_route(.GET, fmt.tprintf("/%s/%s", server.apiBase, e), handle_options_request)
+        add_route_to_router(router, newRoute)
+    }
+}
+
 serve :: proc(server: ^lib.Server) -> lib.Error {
     using lib
     using fmt
@@ -40,36 +60,12 @@ serve :: proc(server: ^lib.Server) -> lib.Error {
     { //START OF TEMP CONTEXT ALLOCATION SCOPE
             context.allocator = context.temp_allocator
 
-            //Example of making several static CORS preflight endpoints
-            make_several_static_cors_endpoints :: proc(server: ^lib.Server){
-                staticEndpoints:= []string{"ping", "health"} //Change these if you want or modify the logic :)
-
-                for e in staticEndpoints{
-                    newRoute:= make_new_route(.OPTIONS, tprintf("/%s/%s", server.apiBase, e), handle_options_request)
-                    add_route_to_router(router, newRoute)
-                }
-            }
+            make_several_static_cors_endpoints(server)
+            make_several_get_endpoints(server)
 
             //Example of making a dynamic CORS preflight endpoint.
             dynamicOptionsRoute:= make_new_route(.OPTIONS,tprintf("/%s/*", server.apiBase), handle_options_request)
             add_route_to_router(router, dynamicOptionsRoute)
-
-
-            //OPTIONS '/*' dynamic route. CORS preflight related shit. Need these otherwise shit breaks
-            // add_route_to_router(router, tprintf("/%s/*", server.apiBase), handle_options_request)
-            // add_route_to_router(router, .OPTIONS, "/api/v1/ping", handle_options_request)
-            // add_route_to_router(router, .OPTIONS, "/api/v1/health", handle_options_request)
-
-
-            //Example of making several static GET request endpoints
-            make_several_get_endpoints :: proc(server: ^lib.Server){
-                staticEndpoints:= []string{"ping", "health"} //Change these if you want or modify the logic :)
-
-                for e in staticEndpoints{
-                    newRoute:= make_new_route(.GET, tprintf("/%s/%s", server.apiBase, e), handle_options_request)
-                    add_route_to_router(router, newRoute)
-                }
-            }
 
             //Example of making a single static GET request endpoint
             dynamicRoute:= make_new_route(.GET,tprintf("/%s/*", server.apiBase), handle_options_request)
@@ -145,7 +141,7 @@ handle_connection :: proc(socket: net.TCP_Socket, server: ^lib.Server, router: ^
         args := []string{request_body} if len(request_body) > 0 else []string{""}
 
         // Handle the request using router
-        httpStatus, responseBody := handle_http_request(server.config, router, method, path, headers, args)
+        httpStatus, responseBody := handle_http_request(server, router, method, path, headers, args)
 
 
 
@@ -156,7 +152,7 @@ handle_connection :: proc(socket: net.TCP_Socket, server: ^lib.Server, router: ^
         responseHeaders["X-API-Version"] = "v1"
 
         // Apply CORS headers to response
-        apply_cors_headers(server.config, &responseHeaders, headers, method)
+        apply_cors_headers(server, &responseHeaders, headers, method)
 
         response := build_http_response(httpStatus, responseHeaders, responseBody)
 

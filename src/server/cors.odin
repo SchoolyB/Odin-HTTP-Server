@@ -23,7 +23,7 @@ File Description:
 *********************************************************/
 
 // Apply CORS headers to response
-apply_cors_headers :: proc(config: ^lib.Config, headers: ^map[string]string, requestHeaders: map[string]string, method: lib.HttpMethod) {
+apply_cors_headers :: proc(server: ^lib.Server, headers: ^map[string]string, requestHeaders: map[string]string, method: lib.HttpMethod) {
     using lib
     using fmt
     using strings
@@ -40,7 +40,7 @@ apply_cors_headers :: proc(config: ^lib.Config, headers: ^map[string]string, req
     }
 
     // Load CORS config safely
-    corsOptions := make_default_cors_options(config)
+    corsOptions := make_default_cors_options(server)
     if corsOptions == nil {
         headers["Access-Control-Allow-Origin"] = "*"
         headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,DELETE,OPTIONS"
@@ -117,7 +117,7 @@ apply_cors_headers :: proc(config: ^lib.Config, headers: ^map[string]string, req
 }
 
 // Default CORS options that allow specific origins and common methods
-make_default_cors_options :: proc(config: ^lib.Config) -> ^lib.CorsOptions {
+make_default_cors_options :: proc(server: ^lib.Server) -> ^lib.CorsOptions {
     using lib
     using fmt
 
@@ -127,18 +127,18 @@ make_default_cors_options :: proc(config: ^lib.Config) -> ^lib.CorsOptions {
         return nil
     }
 
-    defaultCorsOptions.allowOrigins = config.cors.allowedOrigins
-    defaultCorsOptions.allowMethods = config.cors.allowedMethods
-    defaultCorsOptions.allowHeaders = config.cors.allowedHeaders
+    defaultCorsOptions.allowOrigins = server.config.cors.allowedOrigins
+    defaultCorsOptions.allowMethods = server.config.cors.allowedMethods
+    defaultCorsOptions.allowHeaders = server.config.cors.allowedHeaders
     defaultCorsOptions.exposeHeaders = []string{}
-    defaultCorsOptions.allowCredentials = config.cors.allowCredentials
-    defaultCorsOptions.maxAge = config.cors.maxAgeSeconds
+    defaultCorsOptions.allowCredentials = server.config.cors.allowCredentials
+    defaultCorsOptions.maxAge = server.config.cors.maxAgeSeconds
 
     return defaultCorsOptions
 }
 
 // Handle OPTIONS preflight requests
-handle_options_request :: proc(config: ^lib.Config, method: lib.HttpMethod, path: string, headers: map[string]string, args: []string = {""}) -> (^lib.HttpStatus, string) {
+handle_options_request :: proc(server: ^lib.Server, method: lib.HttpMethod, path: string, headers: map[string]string, args: []string = {""}) -> (^lib.HttpStatus, string) {
     using lib
     using fmt
 
@@ -147,7 +147,7 @@ handle_options_request :: proc(config: ^lib.Config, method: lib.HttpMethod, path
     defer delete(responseHeaders)
 
     // Apply CORS options for preflight
-    apply_cors_headers(config, &responseHeaders, headers, method)
+    apply_cors_headers(server, &responseHeaders, headers, method)
 
     // Return 204 No Content for OPTIONS requests I guess this standard for CORS preflight
     return make_new_http_status(.NO_CONTENT, HttpStatusText[.NO_CONTENT]), ""

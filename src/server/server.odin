@@ -9,22 +9,21 @@ import "core:thread"
 import "core:strings"
 import "core:strconv"
 import lib "../library"
-/********************************************************
-Author: Marshall A Burns
-GitHub: @SchoolyB
+/*
+Copyright (c) 2025-Present Marshall A. Burns
 
-Copyright (c) 2025-Present Marshall A Burns and Archetype Dynamics, Inc.
-All Rights Reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-This software is proprietary and confidential. Unauthorized copying,
-distribution, modification, or use of this software, in whole or in part,
-is strictly prohibited without the express written permission of
-Archetype Dynamics, Inc.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-
-File Description:
-            Contains logic for server session information tracking
-*********************************************************/
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 @(private)
 serverIsRunning:= false
 
@@ -33,12 +32,14 @@ router := make_new_router()
 
 //Example of making several static CORS preflight endpoints
 make_several_static_cors_endpoints :: proc(server: ^lib.Server){
-    staticEndpoints:= []string{"ping", "health"} //Change these if you want or modify the logic :)
+    staticEndpoints:= []string{"ping", "health", "user"} //Change these if you want or modify the logic :)
 
     for e in staticEndpoints{
-        newRoute:= make_new_route(.OPTIONS, fmt.tprintf("/%s/%s", server.apiBase, e), handle_options_request)
+        newRoute:= make_new_route(.OPTIONS, fmt.tprintf("%s/%s", server.apiBase, e), handle_options_request)
         add_route_to_router(router, newRoute)
     }
+
+
 }
 
 //Example of making several static GET request endpoints
@@ -46,7 +47,7 @@ make_several_get_endpoints :: proc(server: ^lib.Server){
     staticEndpoints:= []string{"ping", "health"} //Change these if you want or modify the logic :)
 
     for e in staticEndpoints{
-        newRoute:= make_new_route(.GET, fmt.tprintf("/%s/%s", server.apiBase, e), handle_options_request)
+        newRoute:= make_new_route(.GET, fmt.tprintf("%s/%s", server.apiBase, e), handle_get_request)
         add_route_to_router(router, newRoute)
     }
 }
@@ -64,12 +65,16 @@ serve :: proc(server: ^lib.Server) -> lib.Error {
             make_several_get_endpoints(server)
 
             //Example of making a dynamic CORS preflight endpoint.
-            dynamicOptionsRoute:= make_new_route(.OPTIONS,tprintf("/%s/*", server.apiBase), handle_options_request)
+            dynamicOptionsRoute:= make_new_route(.OPTIONS,tprintf("%s/*", server.apiBase), handle_options_request)
             add_route_to_router(router, dynamicOptionsRoute)
 
             //Example of making a single static GET request endpoint
-            dynamicRoute:= make_new_route(.GET,tprintf("/%s/*", server.apiBase), handle_options_request)
-            add_route_to_router(router, dynamicRoute)
+            dynamicGetRoute:= make_new_route(.GET,tprintf("%s/*", server.apiBase), handle_options_request)
+            add_route_to_router(router, dynamicGetRoute)
+
+            //Example of making single static POST request endpoint. The 'users' endpoint was set up above on or near line #36
+            staticPostRoute:= make_new_route(.POST, fmt.tprintf("%s/user", server.apiBase), handle_post_request)
+            add_route_to_router(router, staticPostRoute)
 
     } //END OF TEMP CONTEXT ALLOCATION SCOPE
 

@@ -8,7 +8,30 @@ import "core:strconv"
 import "core:encoding/json"
 import "core:encoding/base64"
 import lib "../library"
+/*
+Copyright (c) 2025-Present Marshall A. Burns
 
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+
+//This struct is only used for the POST request handler example. Disregard
+@(private)
+User :: struct{
+    firstName, lastName: string,
+    email: string,
+    age: int
+}
 
 
 //Example of GET request procedure depending on the arguments in the path. In this case '/health' and '/ping'
@@ -41,7 +64,9 @@ handle_get_request :: proc(server: ^lib.Server, method: lib.HttpMethod, path: st
             %s`,
             "{", server.version, time.now(), "}")
 
+
         response := healthData
+
         return make_new_http_status(.OK, HttpStatusText[.OK]), response
     }
 
@@ -55,6 +80,49 @@ handle_get_request :: proc(server: ^lib.Server, method: lib.HttpMethod, path: st
     return newHTTPStatus, "Not Found\n"
 }
 
+
+//Example of POST request procedure depending on the arguments in the path. In this case '/user'
+//You can add logic for POST(ing) other paths if you so choose.
+handle_post_request :: proc(server: ^lib.Server, method: lib.HttpMethod, path: string, headers: map[string]string, args: []string = {""}) -> (^lib.HttpStatus, string){
+    using lib
+    using fmt
+    using strings
+
+
+    if method != .POST{
+        newHTTPStatus := make_new_http_status(.BAD_REQUEST, HttpStatusText[.BAD_REQUEST])
+        return newHTTPStatus, "Request Failed: Method not allowed\n"
+    }
+
+    segments:= split_path_into_segments(path)
+    numberOfSegments:= len(segments)
+
+    //Handle logic for: "/api/v1/users"
+    if numberOfSegments == 3 && segments[2] == "user"{
+
+        //Emulating user signup information or something
+        //Modify these exmaple values if you want :)
+        user:= new(User)
+        user.firstName = "Thor"
+        user.lastName = "Odinson"
+        user.age = 100000
+        user.email = "GodOFThunder69420xD"
+
+        userInfoResponse:=fmt.tprintf( `
+            %s
+            "firstname": "%s",
+            "lastname": "%s",
+            "age": "%d",
+            "email": "%s",
+            %s`,
+            "{",user.firstName, user.lastName, user.age, user.email, "}")
+
+        return make_new_http_status(.OK, HttpStatusText[.OK]), userInfoResponse
+    }
+
+    newHTTPStatus := make_new_http_status(.NOT_FOUND, HttpStatusText[.NOT_FOUND])
+    return newHTTPStatus, "Not Found\n"
+}
 
 
 //Helper used to parse a query parameter string into a map.

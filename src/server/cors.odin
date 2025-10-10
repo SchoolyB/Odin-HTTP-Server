@@ -3,24 +3,21 @@ package server
 import "core:fmt"
 import "core:strings"
 import lib "../library"
+/*
+Copyright (c) 2025-Present Marshall A. Burns
 
-/********************************************************
-Author: Marshall A Burns
-GitHub: @SchoolyB
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-Copyright (c) 2025-Present Marshall A Burns and Archetype Dynamics, Inc.
-All Rights Reserved.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-This software is proprietary and confidential. Unauthorized copying,
-distribution, modification, or use of this software, in whole or in part,
-is strictly prohibited without the express written permission of
-Archetype Dynamics, Inc.
-
-
-File Description:
-            Contains logic for handling Cross-Origin Resource Sharing (CORS)
-            for the OstrichDB server.
-*********************************************************/
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 
 // Apply CORS headers to response
 apply_cors_headers :: proc(server: ^lib.Server, headers: ^map[string]string, requestHeaders: map[string]string, method: lib.HttpMethod) {

@@ -102,6 +102,10 @@ serve :: proc(server: ^lib.Server) -> lib.Error {
     // Main server loop
     for serverIsRunning {
         fmt.println("Waiting for new connection...")
+        println("To safely kill the server enter: 'kill' or 'exit' then hit your 'enter' key")
+
+        //Handle kill/exit input
+        HANDLE_SERVER_KILL_SWITCH()
         clientSocket, remoteEndpoint, acceptError := net.accept_tcp(listenSocket)
         if acceptError != nil {
             fmt.println("Error accepting connection: ", acceptError)
@@ -128,7 +132,6 @@ handle_connection :: proc(socket: net.TCP_Socket, server: ^lib.Server, router: ^
 
     for {
         println("Waiting to receive data...")
-        println("To safely kill the server enter: 'kill' or 'exit' then hit your 'enter' key")
 
         bytesRead, readTCPSocketError := net.recv(socket, buf[:])
 
@@ -222,12 +225,13 @@ HANDLE_SERVER_KILL_SWITCH :: proc() {
 		input := get_input()
 		if input == "kill" || input == "exit" {
 			serverIsRunning = false
-
 			//Be sure to change the port number if you use a different server.config.port in main.odin
 			portCString := clone_to_cstring("nc -zv localhost 8080")
 			libc.system(portCString)
-
 			return
-		} else do continue
+		} else{
+		    println("Invalid input. Please try again")
+			continue
+		}
 	}
 }

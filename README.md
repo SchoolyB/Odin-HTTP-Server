@@ -40,5 +40,3 @@ odin run main
 6. Example URL: `http://localhost:8080/api/v1/user`
 7. The only request handlers that I built out are for `GET` and `POST`
 8. There are tons of comments to help folks understand :)
-
-

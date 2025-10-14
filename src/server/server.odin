@@ -38,8 +38,6 @@ make_several_static_cors_endpoints :: proc(server: ^lib.Server){
         newRoute:= make_new_route(.OPTIONS, fmt.tprintf("%s/%s", server.apiBase, e), handle_options_request)
         add_route_to_router(router, newRoute)
     }
-
-
 }
 
 //Example of making several static GET request endpoints
@@ -52,6 +50,7 @@ make_several_get_endpoints :: proc(server: ^lib.Server){
     }
 }
 
+@(require_results)
 serve :: proc(server: ^lib.Server) -> lib.Error {
     using lib
     using fmt
@@ -79,13 +78,13 @@ serve :: proc(server: ^lib.Server) -> lib.Error {
     } //END OF TEMP CONTEXT ALLOCATION SCOPE
 
 
-    bindIP := parse_ip_address("127.0.0.1") //Pass is whatever address you are binding to
+    bindIP := parse_ip_address(BIND_ADDRESS) //Pass is whatever address you are binding to
     endpoint := net.Endpoint{bindIP, server.config.port}
 
     listenSocket, listenError := net.listen_tcp(endpoint)
     if listenError != nil {
         printf("Error listening on socket: %v\n", listenError)
-        return make_error( "Server Failed To Listen On TCP Socket", .ERROR, get_caller_location())
+        return error( "Server Failed To Listen On TCP Socket", .ERROR, get_caller_location())
     }
 
     defer net.close(net.TCP_Socket(listenSocket))
@@ -109,14 +108,14 @@ serve :: proc(server: ^lib.Server) -> lib.Error {
         clientSocket, remoteEndpoint, acceptError := net.accept_tcp(listenSocket)
         if acceptError != nil {
             fmt.println("Error accepting connection: ", acceptError)
-            return make_error("Server Failed To Accept Client TCP Socket Connection", .ERROR, get_caller_location())
+            return error("Server Failed To Accept Client TCP Socket Connection", .ERROR, get_caller_location())
         }
 
         handle_connection(clientSocket, server, router)
     }
 
     fmt.println("Server stopped successfully")
-    return make_error()
+    return ok()
 }
 
 @(cold)
@@ -137,7 +136,7 @@ handle_connection :: proc(socket: net.TCP_Socket, server: ^lib.Server, router: ^
 
         if bytesRead == 0 {
             println("Connection closed by client")
-            return make_error()
+            return ok()
         }
 
         // Parse incoming request
@@ -157,7 +156,7 @@ handle_connection :: proc(socket: net.TCP_Socket, server: ^lib.Server, router: ^
         responseHeaders := make(map[string]string)
         responseHeaders["Content-Type"] = "application/json"
         responseHeaders["Server"] = tprintf("Odin HTTP Server:%s", server.version)
-        responseHeaders["X-API-Version"] = "v1"
+        responseHeaders["X-API-Version"] = API_VERSION
 
         // Apply CORS headers to response
         apply_cors_headers(server, &responseHeaders, headers, method)
@@ -166,10 +165,10 @@ handle_connection :: proc(socket: net.TCP_Socket, server: ^lib.Server, router: ^
 
         // Write response to socket
         _, writeError := net.send(socket, response)
-        defer delete(response) //TODO: If a memory leak ye seek come here and take a peek - Marshall
+        defer delete(response)
         if writeError != nil {
             printf("ERROR: Failed to write response to socket: %v\n", writeError)
-            return make_error("Server Failed To Write Response", .ERROR, get_caller_location())
+            return error("Server Failed To Write Response", .ERROR, get_caller_location())
         }
     }
 }
@@ -207,7 +206,7 @@ parse_ip_address :: proc(ipString: string) -> net.IP4_Address {
     if ipString == "0.0.0.0" {
         return net.IP4_Address{0, 0, 0, 0}
     }
-    if ipString == "127.0.0.1" || ipString == "localhost" {
+    if ipString == lib.BIND_ADDRESS || ipString == lib.HOST {
         return net.IP4_Address{127, 0, 0, 1}
     }
 
@@ -220,12 +219,11 @@ HANDLE_SERVER_KILL_SWITCH :: proc() {
     using fmt
     using strings
 
-
 	for serverIsRunning {
 		input := get_input()
 		if input == "kill" || input == "exit" {
 			serverIsRunning = false
-			//Be sure to change the port number if you use a different server.config.port in main.odin
+			//Be sure to change the port number below if you use a different server.config.port in main.odin
 			portCString := clone_to_cstring("nc -zv localhost 8080")
 			libc.system(portCString)
 			return

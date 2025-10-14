@@ -21,8 +21,17 @@ limitations under the License.
 
 
 validMethods:[]HttpMethod={.OPTIONS, .GET, .POST, .PUT, .DELETE, .HEAD}
-serverPorts:[dynamic]int
 
+API_VERSION :: "v1"
+BIND_ADDRESS :: "127.0.0.1"
+HOST:: "localhost"
+DEFAULT_ADDRESS :: "http://localhost:8080"
+SERVER_VERSION :: "v0.1.0"
+MAX_CONNECTIONS :: 1
+BACKLOG_SIZE :: 3
+MAX_REQUEST_BODY_SIZE_MB :: 5
+SERVER_PORT :: 8080
+MAX_AGE_SECONDS :: 86400
 
 get_input :: proc() -> string {
 	buf := new([1024]byte)

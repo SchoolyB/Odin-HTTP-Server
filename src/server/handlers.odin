@@ -171,7 +171,6 @@ has_valid_query_parameters :: proc(path: string) -> bool {
     return false
 }
 
-
 // Helper to extract query string from path
 @(require_results)
 extract_query_from_path :: proc(path: string) -> string {
@@ -196,48 +195,4 @@ split_path_into_segments :: proc(path: string) -> []string {
 
     // Then split normally
     return split(trim_prefix(cleanPath, "/"), "/")
-}
-
-
-//Shoutout to ClaudeAI by Anthropic for this shit
-@(require_results)
-clean_metadata_field :: proc(input: string, defaultValue: string) -> string {
-    using strings
-
-    if len(input) == 0 {
-        return clone(defaultValue)
-    }
-
-    trimmed := trim_space(input)
-    if len(trimmed) == 0 {
-        return clone(defaultValue)
-    }
-
-    // Remove any non-printable characters and escape quotes
-    cleaned := make([dynamic]u8)
-    // defer delete(cleaned)
-
-    for char in transmute([]u8)trimmed {
-        // Only include printable ASCII characters
-        if char >= 32 && char <= 126 {
-            if char == '"' {
-                // Escape quotes
-                append(&cleaned, '\\')
-                append(&cleaned, '"')
-            } else {
-                append(&cleaned, char)
-            }
-        } else if char == ' ' {
-            // Keep spaces
-            append(&cleaned, char)
-        }
-        // Skip all other characters (control characters, etc.)
-    }
-
-    cleanedStr := string(cleaned[:])
-    if len(trim_space(cleanedStr)) == 0 {
-        return clone(defaultValue)
-    }
-
-    return clone(cleanedStr)
 }

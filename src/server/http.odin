@@ -67,16 +67,16 @@ parse_http_request :: proc(data:[]byte) -> (method: lib.HttpMethod, path: string
 
 	//Iterate through the lines of the request
 	for i := 1; i < len(lines); i += 1 {
-		if lines[i] == "" { 	//if the line is empty, the headers are done and set the headerEnd to the current index
+		if lines[i] == "" { 	//if the line is empty the headers are done and set the headerEnd to the current index
 			headerEnd = i
 			break
 		}
 
-		//split the line into key and value
+		//split line into key and value
 		headerParts := strings.split(lines[i], ": ")
 		defer delete(headerParts)
 
-		//Add it to the headers map
+		//Add to headers map
 		if len(headerParts) == 2 {
 			headers[headerParts[0]] = headerParts[1]
 		}
@@ -88,7 +88,7 @@ parse_http_request :: proc(data:[]byte) -> (method: lib.HttpMethod, path: string
 
 //Feel free to pass in a specific version when you call this
 @(require_results)
-build_http_response :: proc(status: ^lib.HttpStatus, headers: map[string]string, body: string, version:= "v1") -> []byte {
+build_http_response :: proc(status: ^lib.HttpStatus, headers: map[string]string, body: string, version:= lib.API_VERSION) -> []byte {
     using lib
     using fmt
     using strings

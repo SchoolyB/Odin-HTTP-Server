@@ -36,7 +36,7 @@ apply_cors_headers :: proc(server: ^lib.Server, headers: ^map[string]string, req
         return
     }
 
-    // Load CORS config safely
+    // Load CORS config
     corsOptions := make_default_cors_options(server)
     if corsOptions == nil {
         headers["Access-Control-Allow-Origin"] = "*"
@@ -113,7 +113,6 @@ apply_cors_headers :: proc(server: ^lib.Server, headers: ^map[string]string, req
     }
 }
 
-// Default CORS options that allow specific origins and common methods
 make_default_cors_options :: proc(server: ^lib.Server) -> ^lib.CorsOptions {
     using lib
     using fmt
@@ -143,9 +142,8 @@ handle_options_request :: proc(server: ^lib.Server, method: lib.HttpMethod, path
     responseHeaders := make(map[string]string)
     defer delete(responseHeaders)
 
-    // Apply CORS options for preflight
     apply_cors_headers(server, &responseHeaders, headers, method)
 
-    // Return 204 No Content for OPTIONS requests I guess this standard for CORS preflight
+    //Return 204 No Content for OPTIONS requests I guess this is standard for CORS preflight
     return make_new_http_status(.NO_CONTENT, HttpStatusText[.NO_CONTENT]), ""
 }

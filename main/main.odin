@@ -32,59 +32,52 @@ main ::proc(){
     server:= create_custom_server(config)
 
     // Run the server
-    serve(server)
+    result := serve(server)
 }
 
+@(cold)
 create_custom_config :: proc() -> lib.Config {
     using lib
 
-    //Make a new config to be passed to the server
-    // config := new(Config)
-
-    //General config information. Modify discretion
-
+    //General config setup. Modify at own discretion
     config :Config
-    config.port = 8080 //If you modify this, update the port in HANDLE_SERVER_KILL_SWITCH() in server.odin
-    config.host = strings.clone("localhost")
-    config.bindAddress =  strings.clone("127.0.0.1")
-    config.apiVersion = strings.clone("v1")
-    config.backlogSize  = 3
-    config.maxConnections = 1
 
-    //Security config information. Modify discretion
-    config.security.maxRequestBodySizeMb = 5
-
-    //CORS config information. Modify discretion
-    allowedOrigins:[]string={"http://localhost:8080"}
+    //Modify these values in src/library/common.odin if you so choose
+    config.port = SERVER_PORT
+    config.host = HOST
+    config.bindAddress =  BIND_ADDRESS
+    config.apiVersion = API_VERSION
+    config.backlogSize  = BACKLOG_SIZE
+    config.maxConnections = MAX_CONNECTIONS
+    //Security config information
+    config.security.maxRequestBodySizeMb = MAX_REQUEST_BODY_SIZE_MB
+    //CORS config information
+    allowedOrigins:[]string={DEFAULT_ADDRESS}
     config.cors.allowedOrigins = slice.clone(allowedOrigins)
 
     allowedMethods:[]lib.HttpMethod = slice.clone(validMethods)
     config.cors.allowedMethods =  allowedMethods
 
-
     allowedHeaders :[]string= {"Content-Type","Authorization", "authorization", "X-Requested-With", "X-API-Key"}
     config.cors.allowedHeaders = slice.clone(allowedHeaders)
     config.cors.exposeHeaders = slice.clone([]string{"X-Project-Id", "X-Resource-Count"})
-    config.cors.maxAgeSeconds = 86400
+    config.cors.maxAgeSeconds = MAX_AGE_SECONDS
     config.cors.allowCredentials = true
 
     return config
 }
 
-
+@(cold)
 create_custom_server :: proc(config: lib.Config) -> ^lib.Server{
     using fmt
     using lib
 
     //Make a new server
     server := new(lib.Server)
-
-    serverVersion:= "v0.1.0" //Modify this if you so choose
     apiBase:= tprintf("/api/%s", config.apiVersion)
 
-
     server.startTimestamp = time.now()
-    server.version = serverVersion
+    server.version = SERVER_VERSION
     server.apiBase = strings.clone(apiBase)
     server.config = config
 

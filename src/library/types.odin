@@ -40,7 +40,6 @@ Config :: struct {
         maxAgeSeconds: int,
         allowCredentials: bool
     },
-
 }
 
 HttpStatusCode :: enum{
@@ -104,18 +103,14 @@ Router :: struct {
     routes: [dynamic]Route
 }
 
-//Cant find docs on #sparse. Just used the compilers error message if you removed it
 HttpStatusText :: #sparse[HttpStatusCode]string {
-    //2xx codes
     .OK                  = "OK",
     .CREATE              = "Created",
     .NO_CONTENT          = "No Content",
     .PARTIAL_CONTENT     = "Partial Content",
-    //3xx codes
     .MOVED_PERMANENTLY   = "Moved Permanently",
     .FOUND               = "Found",
     .NOT_MODIFIED        = "Not Modified",
-    //4xx codes
     .BAD_REQUEST         = "Bad Request",
     .UNAUTHORIZED        = "Unauthorized",
     .FORBIDDEN           = "Forbidden",
@@ -125,7 +120,6 @@ HttpStatusText :: #sparse[HttpStatusCode]string {
     .PAYLOAD_TOO_LARGE   = "Payload Too Large",
     .UNSUPPORTED_MEDIA   = "Unsupported Media Type",
     .TOO_MANY_REQUESTS   = "Too Many Requests",
-    //5xx codes
     .SERVER_ERROR        = "Internal Server Error",
     .NOT_IMPLEMENTED     = "Not Implemented",
     .BAD_GATEWAY         = "Bad Gateway",

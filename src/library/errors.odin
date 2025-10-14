@@ -38,9 +38,18 @@ get_caller_location :: proc(location:= #caller_location) -> SourceCodeLocation {
     return location
 }
 
-
-make_error ::proc(msg:string= "No Error", type:ErrorType=.NONE, loc:= #caller_location) -> Error{
-    return Error{ message = msg, type = type, location = loc}
+ok :: proc(loc:=#caller_location)-> Error{
+    return Error{
+         message = "No Error",
+         type = .NONE,
+         location = loc
+     }
 }
 
-
+error :: proc(msg: string, type: ErrorType = .ERROR, loc := #caller_location) -> Error {
+    return Error{
+        message = msg,
+        type = type,
+        location = loc
+    }
+}
